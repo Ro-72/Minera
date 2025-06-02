@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/calculos_met_page.dart';
 import 'pages/control_muestras_page.dart';
 import 'pages/consultar_pets_page.dart';
@@ -9,7 +11,11 @@ import 'pages/notificaciones_page.dart';
 import 'pages/perfil_usuario_page.dart';
 import 'pages/configuracion_ayuda_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase if needed
+  // Ensure that Firebase is initialized before running the app
+
   runApp(const MyApp());
 }
 
@@ -40,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _login() async {
-    // Allow testing with hardcoded credentials
+    // Borrar cuando se haga el deploy
     if (_emailController.text == 'elpepe' &&
         _passwordController.text == '1234') {
       Navigator.pushReplacement(
@@ -50,24 +56,25 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final response = await http.post(
-      Uri.parse('https://example.com/api/login'),
-      body: {
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login failed. Please try again.')),
-      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed. Please try again.';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -102,6 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: const Text('Don\'t have an account? Register'),
             ),
+            // DEV BUTTON TO BYPASS LOGIN
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+              ),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+              },
+              child: const Text('DEV: Bypass Login'),
+            ),
           ],
         ),
       ),
@@ -122,26 +143,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _register() async {
-    final response = await http.post(
-      Uri.parse('https://example.com/api/register'),
-      body: {
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      // Handle successful registration
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Registration successful!')));
       Navigator.pop(context);
-    } else {
-      // Handle registration error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed. Please try again.')),
-      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'Registration failed. Please try again.';
+      if (e.code == 'email-already-in-use') {
+        message = 'Email already in use.';
+      } else if (e.code == 'weak-password') {
+        message = 'Password is too weak.';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
