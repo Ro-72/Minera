@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'auth_page.dart';
 
 class ReportesPage extends StatefulWidget {
   const ReportesPage({super.key});
@@ -8,6 +10,139 @@ class ReportesPage extends StatefulWidget {
 }
 
 class _ReportesPageState extends State<ReportesPage> {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData) {
+          // Usuario autenticado, mostrar la página de reportes
+          return const ReportesPageContent();
+        } else {
+          // Usuario no autenticado, mostrar mensaje y botón para login
+          return const ReportesAuthRequired();
+        }
+      },
+    );
+  }
+}
+
+class ReportesAuthRequired extends StatelessWidget {
+  const ReportesAuthRequired({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Row(
+          children: [
+            Icon(Icons.bar_chart, color: Color(0xFFD4AF37)),
+            SizedBox(width: 8),
+            Text('Reportes de Análisis'),
+          ],
+        ),
+        automaticallyImplyLeading: false,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey.shade100, Colors.grey.shade200],
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Acceso Restringido',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2C2C2C),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Para acceder a la sección de reportes es necesario iniciar sesión con una cuenta válida.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AuthPage(),
+                        ),
+                      );
+                      // No need to do anything, StreamBuilder will handle the state change
+                    },
+                    icon: const Icon(Icons.login),
+                    label: const Text('Iniciar Sesión'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade300),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Los reportes contienen información sensible que requiere autenticación.',
+                          style: TextStyle(
+                            color: Color(0xFF2C2C2C),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ReportesPageContent extends StatefulWidget {
+  const ReportesPageContent({super.key});
+
+  @override
+  State<ReportesPageContent> createState() => _ReportesPageContentState();
+}
+
+class _ReportesPageContentState extends State<ReportesPageContent> {
   final TextEditingController codigoController = TextEditingController();
   final TextEditingController tipoController = TextEditingController();
   final TextEditingController horaInicioController = TextEditingController();
@@ -104,6 +239,15 @@ class _ReportesPageState extends State<ReportesPage> {
             Text('Reportes de Análisis'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+            tooltip: 'Cerrar Sesión',
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -445,4 +589,6 @@ class _ReportesPageState extends State<ReportesPage> {
       ),
     );
   }
+
+  // ...existing methods remain the same...
 }
