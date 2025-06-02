@@ -59,93 +59,373 @@ class _CalculosMetPageState extends State<CalculosMetPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cálculos Metalúrgicos')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        title: const Row(
           children: [
-            // % de humedad
-            const Text(
-              '% de Humedad',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const Text(
-              'Fórmula: ((Peso inicial - Peso final) / Peso final) * 100',
-            ),
-            TextField(
-              controller: pesoInicialController,
-              decoration: const InputDecoration(labelText: 'Peso inicial'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: pesoFinalController,
-              decoration: const InputDecoration(labelText: 'Peso final'),
-              keyboardType: TextInputType.number,
-            ),
-            ElevatedButton(
-              onPressed: calcularHumedad,
-              child: const Text('Calcular % de Humedad'),
-            ),
-            if (resultadoHumedad != null)
-              Text('Resultado: ${resultadoHumedad!.toStringAsFixed(2)} %'),
-            const Divider(height: 32),
-
-            // Fuerza de cianuro
-            const Text(
-              'Fuerza de Cianuro',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const Text('Fórmula: Gasto de solución de cianuro * factor'),
-            TextField(
-              controller: gastoSolucionController,
-              decoration: const InputDecoration(
-                labelText: 'Gasto de solución de cianuro',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: factorController,
-              decoration: const InputDecoration(labelText: 'Factor'),
-              keyboardType: TextInputType.number,
-            ),
-            ElevatedButton(
-              onPressed: calcularFuerzaCianuro,
-              child: const Text('Calcular Fuerza de Cianuro'),
-            ),
-            if (resultadoFuerzaCianuro != null)
-              Text('Resultado: ${resultadoFuerzaCianuro!.toStringAsFixed(4)}'),
-            const Divider(height: 32),
-
-            // % de cianuro
-            const Text(
-              '% de Cianuro',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const Text(
-              'Fórmula: (Fuerza de cianuro / 100) * volumen de muestra',
-            ),
-            TextField(
-              controller: fuerzaCianuroController,
-              decoration: const InputDecoration(labelText: 'Fuerza de cianuro'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: volumenMuestraController,
-              decoration: const InputDecoration(
-                labelText: 'Volumen de muestra',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            ElevatedButton(
-              onPressed: calcularPorcentajeCianuro,
-              child: const Text('Calcular % de Cianuro'),
-            ),
-            if (resultadoPorcentajeCianuro != null)
-              Text(
-                'Resultado: ${resultadoPorcentajeCianuro!.toStringAsFixed(4)}',
-              ),
+            Icon(Icons.calculate, color: Color(0xFFD4AF37)),
+            SizedBox(width: 8),
+            Text('Cálculos Metalúrgicos'),
           ],
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey.shade50, Colors.grey.shade100],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Card para % de humedad
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD4AF37),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.water_drop,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Porcentaje de Humedad',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF2C2C2C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Fórmula: ((Peso inicial - Peso final) / Peso final) × 100',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF8B7355),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: pesoInicialController,
+                        decoration: const InputDecoration(
+                          labelText: 'Peso Inicial (g)',
+                          prefixIcon: Icon(Icons.scale),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: pesoFinalController,
+                        decoration: const InputDecoration(
+                          labelText: 'Peso Final (g)',
+                          prefixIcon: Icon(Icons.scale),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: calcularHumedad,
+                          icon: const Icon(Icons.calculate),
+                          label: const Text('Calcular % de Humedad'),
+                        ),
+                      ),
+                      if (resultadoHumedad != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD4AF37).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFD4AF37)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFFD4AF37),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Resultado: ${resultadoHumedad!.toStringAsFixed(2)}%',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF2C2C2C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Card para Fuerza de cianuro
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B7355),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.science,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Fuerza de Cianuro',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF2C2C2C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Fórmula: Gasto de solución de cianuro × Factor',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF8B7355),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: gastoSolucionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Gasto de Solución de Cianuro',
+                          prefixIcon: Icon(Icons.local_gas_station),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: factorController,
+                        decoration: const InputDecoration(
+                          labelText: 'Factor',
+                          prefixIcon: Icon(Icons.functions),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: calcularFuerzaCianuro,
+                          icon: const Icon(Icons.calculate),
+                          label: const Text('Calcular Fuerza de Cianuro'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B7355),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (resultadoFuerzaCianuro != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B7355).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF8B7355)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF8B7355),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Resultado: ${resultadoFuerzaCianuro!.toStringAsFixed(4)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF2C2C2C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Card para % de cianuro
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6B4423),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.percent,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Porcentaje de Cianuro',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF2C2C2C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Fórmula: (Fuerza de cianuro / 100) × Volumen de muestra',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF8B7355),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: fuerzaCianuroController,
+                        decoration: const InputDecoration(
+                          labelText: 'Fuerza de Cianuro',
+                          prefixIcon: Icon(Icons.science),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: volumenMuestraController,
+                        decoration: const InputDecoration(
+                          labelText: 'Volumen de Muestra (ml)',
+                          prefixIcon: Icon(Icons.straighten),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: calcularPorcentajeCianuro,
+                          icon: const Icon(Icons.calculate),
+                          label: const Text('Calcular % de Cianuro'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6B4423),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (resultadoPorcentajeCianuro != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6B4423).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF6B4423)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF6B4423),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Resultado: ${resultadoPorcentajeCianuro!.toStringAsFixed(4)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF2C2C2C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

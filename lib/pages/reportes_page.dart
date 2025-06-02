@@ -12,6 +12,9 @@ class _ReportesPageState extends State<ReportesPage> {
   final TextEditingController tipoController = TextEditingController();
   final TextEditingController horaInicioController = TextEditingController();
 
+  // Add a key to force Autocomplete widgets to rebuild
+  Key _autocompleteKey = UniqueKey();
+
   // Simulación de base de datos de muestras usando un JSON
   final List<Map<String, dynamic>> muestrasJson = [
     {"id": "001", "tipo": "Mineral"},
@@ -72,16 +75,16 @@ class _ReportesPageState extends State<ReportesPage> {
   }
 
   void desbloquearInputs() {
-    // Limpia los valores de los TextEditingController y fuerza reconstrucción
-    codigoController.text = '';
-    tipoController.text = '';
-    FocusScope.of(
-      context,
-    ).unfocus(); // <-- fuerza perder el foco y refresca el input
+    // Resetea completamente los inputs y variables de estado
     setState(() {
+      codigoController.clear();
+      tipoController.clear();
       _codigoSelected = false;
       _tipoSelected = false;
+      // Force Autocomplete widgets to rebuild with new key
+      _autocompleteKey = UniqueKey();
     });
+    FocusScope.of(context).unfocus();
   }
 
   @override
@@ -93,232 +96,351 @@ class _ReportesPageState extends State<ReportesPage> {
         muestrasJson.map((e) => e['tipo'] as String).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reportes')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      appBar: AppBar(
+        title: const Row(
           children: [
-            // Botón para desbloquear ambos inputs
-            if (_codigoSelected || _tipoSelected)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: desbloquearInputs,
-                  child: const Text('Desbloquear campos'),
+            Icon(Icons.bar_chart, color: Color(0xFFD4AF37)),
+            SizedBox(width: 8),
+            Text('Reportes de Análisis'),
+          ],
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey.shade50, Colors.grey.shade100],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Botón para desbloquear ambos inputs
+              if (_codigoSelected || _tipoSelected)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: desbloquearInputs,
+                    icon: const Icon(Icons.lock_open),
+                    label: const Text('Desbloquear Campos'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B7355),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Card para inputs principales
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Información de la Muestra',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C2C2C),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Autocomplete para Código de muestra
+                      Autocomplete<String>(
+                        key: _autocompleteKey,
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text == '') {
+                            return const Iterable<String>.empty();
+                          }
+                          return codigos.where((String option) {
+                            return option.contains(textEditingValue.text);
+                          });
+                        },
+                        fieldViewBuilder: (
+                          context,
+                          controller,
+                          focusNode,
+                          onEditingComplete,
+                        ) {
+                          // ...existing code for controller listener and label logic...
+                          controller.addListener(() {
+                            if (controller.text != codigoController.text) {
+                              codigoController.text = controller.text;
+                            }
+                            setState(() {});
+                          });
+
+                          String codigoLabel = 'Código de Muestra';
+                          if (_tipoSelected) {
+                            final muestra = muestrasJson.firstWhere(
+                              (e) =>
+                                  (e['tipo'] as String).toLowerCase() ==
+                                  tipoController.text.toLowerCase(),
+                              orElse: () => {},
+                            );
+                            codigoLabel =
+                                muestra.isNotEmpty
+                                    ? muestra['id']
+                                    : 'ID Bloqueado';
+                          }
+
+                          return TextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            keyboardType: TextInputType.number,
+                            enabled: !_tipoSelected,
+                            decoration: InputDecoration(
+                              labelText: codigoLabel,
+                              hintText: 'Ingrese el código de muestra',
+                              prefixIcon: const Icon(Icons.qr_code),
+                            ),
+                            // ...existing code for onChanged and onSubmitted...
+                            onChanged: (value) {
+                              final filtered = value.replaceAll(
+                                RegExp(r'[^0-9]'),
+                                '',
+                              );
+                              if (filtered != value) {
+                                controller.text = filtered;
+                                controller
+                                    .selection = TextSelection.fromPosition(
+                                  TextPosition(offset: filtered.length),
+                                );
+                              }
+                            },
+                            onSubmitted: (value) {
+                              final codigo = value.trim();
+                              final muestra = muestrasJson.firstWhere(
+                                (e) => e['id'] == codigo,
+                                orElse: () => {},
+                              );
+                              setState(() {
+                                tipoController.text =
+                                    muestra.isNotEmpty ? muestra['tipo'] : '';
+                                _codigoSelected = muestra.isNotEmpty;
+                                if (_codigoSelected) _tipoSelected = false;
+                              });
+                              if (muestra.isNotEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'ID encontrado: ${muestra['id']} (${muestra['tipo']})',
+                                    ),
+                                    backgroundColor: const Color(0xFFD4AF37),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                        // ...existing code for onSelected...
+                        onSelected: (String value) {
+                          final muestra = muestrasJson.firstWhere(
+                            (e) => e['id'] == value,
+                            orElse: () => {},
+                          );
+                          setState(() {
+                            codigoController.text = value;
+                            tipoController.text =
+                                muestra.isNotEmpty ? muestra['tipo'] : '';
+                            _codigoSelected = muestra.isNotEmpty;
+                            if (_codigoSelected) _tipoSelected = false;
+                          });
+                          if (muestra.isNotEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'ID encontrado: ${muestra['id']} (${muestra['tipo']})',
+                                ),
+                                backgroundColor: const Color(0xFFD4AF37),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Autocomplete para Tipo de muestra
+                      Autocomplete<String>(
+                        key: ValueKey('tipo_$_autocompleteKey'),
+                        // ...existing code for optionsBuilder...
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text == '') {
+                            return const Iterable<String>.empty();
+                          }
+                          return tipos.where((String option) {
+                            return option.toLowerCase().contains(
+                              textEditingValue.text.toLowerCase(),
+                            );
+                          });
+                        },
+                        fieldViewBuilder: (
+                          context,
+                          controller,
+                          focusNode,
+                          onEditingComplete,
+                        ) {
+                          // ...existing code for controller listener and label logic...
+                          controller.addListener(() {
+                            if (controller.text != tipoController.text) {
+                              tipoController.text = controller.text;
+                            }
+                            setState(() {});
+                          });
+
+                          String tipoLabel = 'Tipo de Muestra';
+                          if (_codigoSelected) {
+                            final muestra = muestrasJson.firstWhere(
+                              (e) => e['id'] == codigoController.text,
+                              orElse: () => {},
+                            );
+                            tipoLabel =
+                                muestra.isNotEmpty
+                                    ? muestra['tipo']
+                                    : 'Tipo Bloqueado';
+                          }
+
+                          return TextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            enabled: !_codigoSelected,
+                            decoration: InputDecoration(
+                              labelText: tipoLabel,
+                              hintText: 'Ingrese el tipo de muestra',
+                              prefixIcon: const Icon(Icons.category),
+                            ),
+                            onChanged: (value) {
+                              buscarPorTipo(value.trim());
+                            },
+                          );
+                        },
+                        // ...existing code for onSelected...
+                        onSelected: (String value) {
+                          tipoController.text = value;
+                          buscarPorTipo(value);
+                          final muestra = muestrasJson.firstWhere(
+                            (e) =>
+                                (e['tipo'] as String).toLowerCase() ==
+                                value.toLowerCase(),
+                            orElse: () => {},
+                          );
+                          setState(() {
+                            _tipoSelected = muestra.isNotEmpty;
+                            if (_tipoSelected) _codigoSelected = false;
+                          });
+                          if (muestra.isNotEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Tipo encontrado: ${muestra['tipo']}',
+                                ),
+                                backgroundColor: const Color(0xFFD4AF37),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            // Autocomplete para Código de muestra
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text == '') {
-                  return const Iterable<String>.empty();
-                }
-                return codigos.where((String option) {
-                  return option.contains(textEditingValue.text);
-                });
-              },
-              fieldViewBuilder: (
-                context,
-                controller,
-                focusNode,
-                onEditingComplete,
-              ) {
-                controller.addListener(() {
-                  if (controller.text != codigoController.text) {
-                    codigoController.text = controller.text;
-                  }
-                  setState(() {}); // Fuerza refresco para label dinámico
-                });
-                // Usar una sola variable para el labelText y refrescar siempre
-                String codigoLabel = 'Código de muestra';
-                if (_tipoSelected) {
-                  final muestra = muestrasJson.firstWhere(
-                    (e) =>
-                        (e['tipo'] as String).toLowerCase() ==
-                        tipoController.text.toLowerCase(),
-                    orElse: () => {},
-                  );
-                  codigoLabel =
-                      muestra.isNotEmpty ? muestra['id'] : 'ID bloqueado';
-                }
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  keyboardType: TextInputType.number,
-                  enabled: !_tipoSelected,
-                  decoration: InputDecoration(
-                    labelText: codigoLabel,
-                    hintText: 'Ingrese el código',
-                  ),
-                  onChanged: (value) {
-                    final filtered = value.replaceAll(RegExp(r'[^0-9]'), '');
-                    if (filtered != value) {
-                      controller.text = filtered;
-                      controller.selection = TextSelection.fromPosition(
-                        TextPosition(offset: filtered.length),
-                      );
-                    }
-                  },
-                  onSubmitted: (value) {
-                    final codigo = value.trim();
-                    final muestra = muestrasJson.firstWhere(
-                      (e) => e['id'] == codigo,
-                      orElse: () => {},
-                    );
-                    setState(() {
-                      tipoController.text =
-                          muestra.isNotEmpty ? muestra['tipo'] : '';
-                      _codigoSelected = muestra.isNotEmpty;
-                      if (_codigoSelected) _tipoSelected = false;
-                    });
-                    // Mostrar toast si se encontró el id
-                    if (muestra.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'ID encontrado: ${muestra['id']} (${muestra['tipo']})',
+
+              const SizedBox(height: 16),
+
+              // Card para control de tiempo
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Control de Tiempo',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C2C2C),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextField(
+                        controller: horaInicioController,
+                        decoration: const InputDecoration(
+                          labelText: 'Hora de Inicio',
+                          hintText: 'Presione "Iniciar" para comenzar',
+                          prefixIcon: Icon(Icons.access_time),
+                        ),
+                        readOnly: true,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: iniciarHora,
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Iniciar'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  (_horaInicio != null) ? terminarHora : null,
+                              icon: const Icon(Icons.stop),
+                              label: const Text('Terminar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF8B7355),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      if (_tiempoTranscurrido != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD4AF37).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFD4AF37)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.timer, color: Color(0xFFD4AF37)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Tiempo transcurrido: $_tiempoTranscurrido',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2C2C2C),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    }
-                  },
-                );
-              },
-              onSelected: (String value) {
-                final muestra = muestrasJson.firstWhere(
-                  (e) => e['id'] == value,
-                  orElse: () => {},
-                );
-                setState(() {
-                  codigoController.text = value;
-                  tipoController.text =
-                      muestra.isNotEmpty ? muestra['tipo'] : '';
-                  _codigoSelected = muestra.isNotEmpty;
-                  if (_codigoSelected) _tipoSelected = false;
-                });
-                // Mostrar toast si se encontró el id
-                if (muestra.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'ID encontrado: ${muestra['id']} (${muestra['tipo']})',
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // Autocomplete para Tipo de muestra
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text == '') {
-                  return const Iterable<String>.empty();
-                }
-                return tipos.where((String option) {
-                  return option.toLowerCase().contains(
-                    textEditingValue.text.toLowerCase(),
-                  );
-                });
-              },
-              fieldViewBuilder: (
-                context,
-                controller,
-                focusNode,
-                onEditingComplete,
-              ) {
-                // Sincroniza el valor del controller con tipoController
-                controller.addListener(() {
-                  if (controller.text != tipoController.text) {
-                    tipoController.text = controller.text;
-                  }
-                  setState(() {});
-                });
-                // Usar una sola variable para el labelText y refrescar siempre
-                String tipoLabel = 'Tipo de muestra';
-                if (_codigoSelected) {
-                  final muestra = muestrasJson.firstWhere(
-                    (e) => e['id'] == codigoController.text,
-                    orElse: () => {},
-                  );
-                  tipoLabel =
-                      muestra.isNotEmpty ? muestra['tipo'] : 'Tipo bloqueado';
-                }
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  enabled: !_codigoSelected,
-                  decoration: InputDecoration(
-                    labelText: tipoLabel,
-                    hintText: 'Ingrese el tipo',
+                      ],
+                    ],
                   ),
-                  onChanged: (value) {
-                    buscarPorTipo(value.trim());
-                  },
-                );
-              },
-              onSelected: (String value) {
-                tipoController.text = value;
-                buscarPorTipo(value);
-                final muestra = muestrasJson.firstWhere(
-                  (e) =>
-                      (e['tipo'] as String).toLowerCase() ==
-                      value.toLowerCase(),
-                  orElse: () => {},
-                );
-                setState(() {
-                  _tipoSelected = muestra.isNotEmpty;
-                  if (_tipoSelected) _codigoSelected = false;
-                });
-                // Mostrar toast si se encontró el tipo
-                if (muestra.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Tipo encontrado: ${muestra['tipo']}'),
-                    ),
-                  );
-                }
-              },
-            ),
-            // --- ¿Cómo funciona? ---
-            // Cuando seleccionas un código de muestra (id) por autocompletado o enter,
-            // se actualiza el campo tipoController con el nombre correspondiente.
-            // Además, el input de tipo de muestra se bloquea y su hintText muestra el nombre del tipo.
-            // Si desbloqueas los campos, todo vuelve a estar editable.
-            // El mismo comportamiento aplica a la inversa si seleccionas primero el tipo.
-            // El placeholder se refresca correctamente porque se llama setState en cada cambio.
-            // Además, se muestra un toast cuando se encuentra un dato por id o tipo.
-            // -----------------------
-            const SizedBox(height: 16),
-            // Input Hora de inicio (solo lectura)
-            TextField(
-              controller: horaInicioController,
-              decoration: const InputDecoration(
-                labelText: 'Hora de inicio',
-                hintText: 'Presione "Inicio"',
+                ),
               ),
-              readOnly: true,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: iniciarHora,
-                  child: const Text('Inicio'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: (_horaInicio != null) ? terminarHora : null,
-                  child: const Text('Terminar'),
-                ),
-                const SizedBox(width: 16),
-                if (_tiempoTranscurrido != null)
-                  Text('Tiempo: $_tiempoTranscurrido'),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // ...otros widgets si es necesario...
-          ],
+            ],
+          ),
         ),
       ),
     );
