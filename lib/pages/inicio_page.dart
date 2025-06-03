@@ -15,7 +15,7 @@ class InicioPage extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
@@ -81,40 +81,90 @@ class InicioPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Grid de funcionalidades
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+                // Características de la aplicación
+                Container(
+                  width: double.infinity,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildFeatureCard(
-                        'Reportes',
-                        'Análisis detallado de muestras',
-                        Icons.bar_chart,
-                        const Color(0xFFD4AF37),
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD4AF37),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.star,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Características de la Aplicación',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C2C2C),
+                            ),
+                          ),
+                        ],
                       ),
-                      _buildFeatureCard(
-                        'Cálculos',
-                        'Metalúrgicos especializados',
-                        Icons.calculate,
-                        const Color(0xFF8B7355),
-                      ),
-                      _buildFeatureCard(
-                        'PETS',
-                        'Procedimientos de trabajo',
-                        Icons.folder_open,
-                        const Color(0xFF6B4423),
-                      ),
-                      _buildFeatureCard(
-                        'Control',
-                        'Gestión de muestras',
-                        Icons.science,
-                        const Color(0xFF4A4A4A),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildFeatureItem(
+                              'Reportes',
+                              'Análisis detallado de muestras con autenticación',
+                              Icons.bar_chart,
+                              const Color(0xFFD4AF37),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildFeatureItem(
+                              'Cálculos Metalúrgicos',
+                              'Herramientas especializadas para cálculos técnicos',
+                              Icons.calculate,
+                              const Color(0xFF8B7355),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildFeatureItem(
+                              'PETS',
+                              'Procedimientos de trabajo seguro',
+                              Icons.folder_open,
+                              const Color(0xFF6B4423),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildFeatureItem(
+                              'Control de Muestras',
+                              'Gestión integral de muestras mineralógicas',
+                              Icons.science,
+                              const Color(0xFF4A4A4A),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 24),
 
                 // Mensaje de bienvenida
                 Container(
@@ -158,63 +208,46 @@ class InicioPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCard(
+  Widget _buildFeatureItem(
     String title,
     String description,
     IconData icon,
     Color color,
   ) {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+    return Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(icon, color: color, size: 28),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C2C2C),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF8B7355)),
+              ),
+            ],
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C2C2C),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8B7355)),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }

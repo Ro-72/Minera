@@ -206,6 +206,10 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
       final duracion = _horaFin!.difference(_horaInicio!);
       _tiempoTranscurrido =
           "${duracion.inHours.toString().padLeft(2, '0')}:${(duracion.inMinutes % 60).toString().padLeft(2, '0')}:${(duracion.inSeconds % 60).toString().padLeft(2, '0')}";
+
+      // Clear the start time when terminating
+      horaInicioController.clear();
+      _horaInicio = null;
     });
   }
 
@@ -257,7 +261,7 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
             colors: [Colors.grey.shade50, Colors.grey.shade100],
           ),
         ),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
@@ -415,7 +419,6 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
                       // Autocomplete para Tipo de muestra
                       Autocomplete<String>(
                         key: ValueKey('tipo_$_autocompleteKey'),
-                        // ...existing code for optionsBuilder...
                         optionsBuilder: (TextEditingValue textEditingValue) {
                           if (textEditingValue.text == '') {
                             return const Iterable<String>.empty();
@@ -426,6 +429,7 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
                             );
                           });
                         },
+                        optionsMaxHeight: 150, // Limit dropdown height
                         fieldViewBuilder: (
                           context,
                           controller,
@@ -466,7 +470,6 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
                             },
                           );
                         },
-                        // ...existing code for onSelected...
                         onSelected: (String value) {
                           tipoController.text = value;
                           buscarPorTipo(value);
@@ -517,14 +520,54 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
                       ),
                       const SizedBox(height: 16),
 
-                      TextField(
-                        controller: horaInicioController,
-                        decoration: const InputDecoration(
-                          labelText: 'Hora de Inicio',
-                          hintText: 'Presione "Iniciar" para comenzar',
-                          prefixIcon: Icon(Icons.access_time),
+                      // Display area for start time
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
-                        readOnly: true,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              color: Color(0xFF8B7355),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Hora de Inicio',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF8B7355),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  horaInicioController.text.isEmpty
+                                      ? 'Presione "Iniciar" para comenzar'
+                                      : horaInicioController.text,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color:
+                                        horaInicioController.text.isEmpty
+                                            ? Colors.grey.shade600
+                                            : const Color(0xFF2C2C2C),
+                                    fontWeight:
+                                        horaInicioController.text.isEmpty
+                                            ? FontWeight.normal
+                                            : FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 16),
