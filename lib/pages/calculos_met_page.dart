@@ -56,6 +56,30 @@ class _CalculosMetPageState extends State<CalculosMetPage> {
     }
   }
 
+  void limpiarHumedad() {
+    setState(() {
+      pesoInicialController.clear();
+      pesoFinalController.clear();
+      resultadoHumedad = null;
+    });
+  }
+
+  void limpiarFuerzaCianuro() {
+    setState(() {
+      gastoSolucionController.clear();
+      factorController.clear();
+      resultadoFuerzaCianuro = null;
+    });
+  }
+
+  void limpiarPorcentajeCianuro() {
+    setState(() {
+      fuerzaCianuroController.clear();
+      volumenMuestraController.clear();
+      resultadoPorcentajeCianuro = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,13 +173,26 @@ class _CalculosMetPageState extends State<CalculosMetPage> {
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: calcularHumedad,
-                          icon: const Icon(Icons.calculate),
-                          label: const Text('Calcular % de Humedad'),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: calcularHumedad,
+                              icon: const Icon(Icons.calculate),
+                              label: const Text('Calcular % de Humedad'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: limpiarHumedad,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Limpiar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade600,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                       if (resultadoHumedad != null) ...[
                         const SizedBox(height: 16),
@@ -262,17 +299,30 @@ class _CalculosMetPageState extends State<CalculosMetPage> {
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: calcularFuerzaCianuro,
-                          icon: const Icon(Icons.calculate),
-                          label: const Text('Calcular Fuerza de Cianuro'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8B7355),
-                            foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: calcularFuerzaCianuro,
+                              icon: const Icon(Icons.calculate),
+                              label: const Text('Calcular Fuerza de Cianuro'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF8B7355),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: limpiarFuerzaCianuro,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Limpiar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade600,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                       if (resultadoFuerzaCianuro != null) ...[
                         const SizedBox(height: 16),
@@ -379,17 +429,30 @@ class _CalculosMetPageState extends State<CalculosMetPage> {
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: calcularPorcentajeCianuro,
-                          icon: const Icon(Icons.calculate),
-                          label: const Text('Calcular % de Cianuro'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6B4423),
-                            foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: calcularPorcentajeCianuro,
+                              icon: const Icon(Icons.calculate),
+                              label: const Text('Calcular % de Cianuro'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF6B4423),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: limpiarPorcentajeCianuro,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Limpiar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade600,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                       if (resultadoPorcentajeCianuro != null) ...[
                         const SizedBox(height: 16),
