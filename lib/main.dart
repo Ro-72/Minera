@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'pages/calculos_met_page.dart';
 import 'pages/control_muestras_page.dart';
 import 'pages/consultar_pets_page.dart';
@@ -15,6 +16,24 @@ import 'pages/inicio_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await FirebaseAppCheck.instance.activate(
+    // You can also use a `ReCaptchaEnterpriseProvider` provider instance as an
+    // argument for `webProvider`
+    webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'),
+    // Default provider for Android is the Play Integrity provider. You can use the "AndroidProvider" enum to choose
+    // your preferred provider. Choose from:
+    // 1. Debug provider
+    // 2. Safety Net provider
+    // 3. Play Integrity provider
+    androidProvider: AndroidProvider.debug,
+    // Default provider for iOS/macOS is the Device Check provider. You can use the "AppleProvider" enum to choose
+    // your preferred provider. Choose from:
+    // 1. Debug provider
+    // 2. Device Check provider
+    // 3. App Attest provider
+    // 4. App Attest provider with fallback to Device Check provider (App Attest provider is only available on iOS 14.0+, macOS 14.0+)
+    appleProvider: AppleProvider.appAttest,
+  );
   runApp(const MyApp());
 }
 
@@ -98,6 +117,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// ! Legacy LoginScreen - Consider removing after AuthPage integration
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -106,11 +126,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // * Controllers for user input fields
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // * Main login authentication method
   Future<void> _login() async {
-    // Borrar cuando se haga el deploy
+    // TODO: Remove this development bypass before production deployment
+    // ! Development bypass - DELETE before production
     if (_emailController.text == 'elpepe' &&
         _passwordController.text == '1234') {
       Navigator.pushReplacement(
@@ -121,15 +144,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
+      // ? Firebase authentication for existing users
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      // * Successful login - navigate to home page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } on FirebaseAuthException catch (e) {
+      // ! Error handling for authentication failures
       String message = 'Login failed. Please try again.';
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
@@ -151,17 +177,21 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // * Email input field
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
+            // * Password input field - secured with obscureText
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              obscureText: true, // ! Important: Hide password input
             ),
             const SizedBox(height: 20),
+            // * Main login button
             ElevatedButton(onPressed: _login, child: const Text('Login')),
+            // ? Navigation to registration screen
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -173,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: const Text('Don\'t have an account? Register'),
             ),
-            // DEV BUTTON TO BYPASS LOGIN
+            // ! DEVELOPMENT BUTTON - REMOVE BEFORE PRODUCTION
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -194,6 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// ! Legacy RegisterScreen - Consider removing after AuthPage integration
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -202,22 +233,28 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  // * Controllers for registration form fields
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // * User registration method with Firebase
   Future<void> _register() async {
     try {
+      // ? Create new user account with Firebase
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      // * Registration successful - show confirmation and return to login
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Registration successful!')));
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
+      // ! Error handling for registration failures
       String message = 'Registration failed. Please try again.';
+      // TODO: Add more specific error handling for better UX
       if (e.code == 'email-already-in-use') {
         message = 'Email already in use.';
       } else if (e.code == 'weak-password') {
@@ -238,20 +275,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // * Name input field for user registration
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
             ),
+            // * Email input field for account creation
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
+            // * Password input field - secured with obscureText
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              obscureText: true, // ! Important: Hide password input
             ),
             const SizedBox(height: 20),
+            // * Registration submit button
             ElevatedButton(onPressed: _register, child: const Text('Register')),
           ],
         ),
@@ -268,15 +309,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // * Navigation state management
   int _selectedIndex = 0;
 
+  // * List of pages for bottom navigation
   final List<Widget> _pages = [
     const InicioPage(),
-    const ReportesPage(),
+    const ReportesPage(), // * Now handles its own authentication
     const CalculosMetPage(),
     const ConsultarPetsPage(),
   ];
 
+  // * Bottom navigation tap handler
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -432,12 +476,14 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// * Simple wrapper for ReportesPage with authentication handling
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Simply return ReportesPage which now handles its own authentication
+    // ? ReportesPage now handles its own authentication internally
+    // TODO: Consider removing this wrapper if no longer needed
     return const ReportesPage();
   }
 }

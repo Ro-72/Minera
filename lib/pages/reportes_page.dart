@@ -12,9 +12,11 @@ class ReportesPage extends StatefulWidget {
 class _ReportesPageState extends State<ReportesPage> {
   @override
   Widget build(BuildContext context) {
+    // * StreamBuilder monitors Firebase authentication state changes
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        // ? Handle loading state while checking authentication
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -22,10 +24,10 @@ class _ReportesPageState extends State<ReportesPage> {
         }
 
         if (snapshot.hasData) {
-          // Usuario autenticado, mostrar la página de reportes
+          // * User is authenticated - show reports content
           return const ReportesPageContent();
         } else {
-          // Usuario no autenticado, mostrar mensaje y botón para login
+          // ! User not authenticated - show access restriction screen
           return const ReportesAuthRequired();
         }
       },
@@ -63,6 +65,7 @@ class ReportesAuthRequired extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // * Lock icon to indicate restricted access
                 Icon(
                   Icons.lock,
                   size: 80,
@@ -83,17 +86,20 @@ class ReportesAuthRequired extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
+                // * Main authentication button - navigates to separate auth page
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
+                      // ? Navigate to dedicated authentication page
                       final result = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AuthPage(),
                         ),
                       );
-                      // No need to do anything, StreamBuilder will handle the state change
+                      // ! StreamBuilder automatically handles state changes
+                      // TODO: Consider showing loading indicator during navigation
                     },
                     icon: const Icon(Icons.login),
                     label: const Text('Iniciar Sesión'),
