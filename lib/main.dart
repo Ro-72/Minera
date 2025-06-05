@@ -32,7 +32,7 @@ void main() async {
     // 2. Device Check provider
     // 3. App Attest provider
     // 4. App Attest provider with fallback to Device Check provider (App Attest provider is only available on iOS 14.0+, macOS 14.0+)
-    appleProvider: AppleProvider.appAttest,
+    // appleProvider: AppleProvider.appAttest,
   );
   runApp(const MyApp());
 }
