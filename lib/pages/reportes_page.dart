@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'auth_page.dart';
 
 class ReportesPage extends StatefulWidget {
@@ -169,6 +171,9 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
   DateTime? _horaInicio;
   DateTime? _horaFin;
   String? _tiempoTranscurrido;
+  Timer? _timer;
+  String _tiempoEnVivo = "00:00:00";
+  bool _reporteEnviado = false;
 
   bool _codigoSelected = false;
   bool _tipoSelected = false;
@@ -198,38 +203,192 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
   void iniciarHora() {
     setState(() {
       _horaInicio = DateTime.now();
-      horaInicioController.text =
-          "${_horaInicio!.hour.toString().padLeft(2, '0')}:${_horaInicio!.minute.toString().padLeft(2, '0')}:${_horaInicio!.second.toString().padLeft(2, '0')}";
       _horaFin = null;
       _tiempoTranscurrido = null;
+      _reporteEnviado = false;
+      _tiempoEnVivo = "00:00:00";
+    });
+
+    // * Start live timer
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_horaInicio != null && _horaFin == null) {
+        final duracion = DateTime.now().difference(_horaInicio!);
+        setState(() {
+          _tiempoEnVivo =
+              "${duracion.inHours.toString().padLeft(2, '0')}:${(duracion.inMinutes % 60).toString().padLeft(2, '0')}:${(duracion.inSeconds % 60).toString().padLeft(2, '0')}";
+        });
+      }
     });
   }
 
   void terminarHora() {
     if (_horaInicio == null) return;
+
+    // * Validate that we have sample information before saving
+    if (codigoController.text.trim().isEmpty ||
+        tipoController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Por favor complete la información de la muestra antes de terminar',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _horaFin = DateTime.now();
       final duracion = _horaFin!.difference(_horaInicio!);
       _tiempoTranscurrido =
           "${duracion.inHours.toString().padLeft(2, '0')}:${(duracion.inMinutes % 60).toString().padLeft(2, '0')}:${(duracion.inSeconds % 60).toString().padLeft(2, '0')}";
-
-      // Clear the start time when terminating
-      horaInicioController.clear();
-      _horaInicio = null;
     });
+
+    // * Stop timer
+    _timer?.cancel();
+
+    // * Show finish time toast
+    String horaFinalizacion =
+        "${_horaFin!.hour.toString().padLeft(2, '0')}:${_horaFin!.minute.toString().padLeft(2, '0')}:${_horaFin!.second.toString().padLeft(2, '0')}";
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.access_time, color: Colors.white),
+            const SizedBox(width: 8),
+            Text('Finalizado a las: $horaFinalizacion'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF8B7355),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
-  void desbloquearInputs() {
-    // Resetea completamente los inputs y variables de estado
+  // * Send report to Firestore
+  Future<void> _enviarReporte() async {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null || _horaInicio == null || _horaFin == null) {
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // * Get user data from Firestore for complete report information
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+
+      Map<String, dynamic> userData = {};
+      if (userDoc.exists) {
+        userData = userDoc.data() as Map<String, dynamic>;
+      }
+
+      // * Create report document
+      Map<String, dynamic> reportData = {
+        'sampleCode': codigoController.text.trim(),
+        'sampleType': tipoController.text.trim(),
+        'startTime': Timestamp.fromDate(_horaInicio!),
+        'endTime': Timestamp.fromDate(_horaFin!),
+        'processingDuration': _tiempoTranscurrido,
+        'userInfo': {
+          'uid': currentUser.uid,
+          'name': userData['name'] ?? 'Usuario',
+          'email': userData['email'] ?? currentUser.email ?? 'No disponible',
+          'role': userData['role'] ?? 'No especificado',
+        },
+        'createdAt': FieldValue.serverTimestamp(),
+        'reportDate': Timestamp.fromDate(DateTime.now()),
+      };
+
+      // * Save to Firestore reports collection
+      await FirebaseFirestore.instance.collection('reports').add(reportData);
+
+      // Hide loading indicator
+      Navigator.pop(context);
+
+      setState(() {
+        _reporteEnviado = true;
+      });
+
+      // * Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Reporte enviado exitosamente'),
+              ],
+            ),
+            backgroundColor: Color(0xFFD4AF37),
+          ),
+        );
+      }
+
+      // * Reset form after successful send
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _resetForm();
+        }
+      });
+    } catch (e) {
+      // Hide loading indicator
+      Navigator.pop(context);
+
+      // ! Error handling for Firestore operations
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al enviar reporte: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // * Reset form to initial state
+  void _resetForm() {
     setState(() {
+      _horaInicio = null;
+      _horaFin = null;
+      _tiempoTranscurrido = null;
+      _tiempoEnVivo = "00:00:00";
+      _reporteEnviado = false;
       codigoController.clear();
       tipoController.clear();
       _codigoSelected = false;
       _tipoSelected = false;
-      // Force Autocomplete widgets to rebuild with new key
       _autocompleteKey = UniqueKey();
     });
-    FocusScope.of(context).unfocus();
+    _timer?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  // Function to unlock both input fields
+  void desbloquearInputs() {
+    setState(() {
+      _codigoSelected = false;
+      _tipoSelected = false;
+      _autocompleteKey = UniqueKey();
+    });
   }
 
   @override
@@ -526,48 +685,63 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Display area for start time
+                      // * Live timer display
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color:
+                              _horaInicio != null && _horaFin == null
+                                  ? const Color(0xFFD4AF37).withOpacity(0.1)
+                                  : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(
+                            color:
+                                _horaInicio != null && _horaFin == null
+                                    ? const Color(0xFFD4AF37)
+                                    : Colors.grey.shade300,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.access_time,
-                              color: Color(0xFF8B7355),
+                            Icon(
+                              Icons.timer,
+                              color:
+                                  _horaInicio != null && _horaFin == null
+                                      ? const Color(0xFFD4AF37)
+                                      : const Color(0xFF8B7355),
+                              size: 32,
                             ),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Hora de Inicio',
+                                Text(
+                                  _horaInicio != null && _horaFin == null
+                                      ? 'Tiempo Transcurrido'
+                                      : _tiempoTranscurrido != null
+                                      ? 'Tiempo Final'
+                                      : 'Cronómetro',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF8B7355),
+                                    color:
+                                        _horaInicio != null && _horaFin == null
+                                            ? const Color(0xFFD4AF37)
+                                            : const Color(0xFF8B7355),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  horaInicioController.text.isEmpty
-                                      ? 'Presione "Iniciar" para comenzar'
-                                      : horaInicioController.text,
+                                  _tiempoTranscurrido ?? _tiempoEnVivo,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 24,
                                     color:
-                                        horaInicioController.text.isEmpty
-                                            ? Colors.grey.shade600
+                                        _horaInicio != null && _horaFin == null
+                                            ? const Color(0xFFD4AF37)
                                             : const Color(0xFF2C2C2C),
-                                    fontWeight:
-                                        horaInicioController.text.isEmpty
-                                            ? FontWeight.normal
-                                            : FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'monospace',
                                   ),
                                 ),
                               ],
@@ -578,53 +752,95 @@ class _ReportesPageContentState extends State<ReportesPageContent> {
 
                       const SizedBox(height: 16),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: iniciarHora,
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('Iniciar'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  (_horaInicio != null) ? terminarHora : null,
-                              icon: const Icon(Icons.stop),
-                              label: const Text('Terminar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF8B7355),
-                                foregroundColor: Colors.white,
+                      // * Control buttons
+                      if (_horaFin == null) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    _horaInicio == null ? iniciarHora : null,
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Iniciar'),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    (_horaInicio != null) ? terminarHora : null,
+                                icon: const Icon(Icons.stop),
+                                label: const Text('Terminar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF8B7355),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
 
-                      if (_tiempoTranscurrido != null) ...[
+                      // * Send report button (shown after terminating)
+                      if (_horaFin != null && !_reporteEnviado) ...[
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _enviarReporte,
+                            icon: const Icon(Icons.send),
+                            label: const Text('Enviar Reporte'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4AF37),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // * Report sent confirmation
+                      if (_reporteEnviado) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD4AF37).withOpacity(0.1),
+                            color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFD4AF37)),
+                            border: Border.all(color: Colors.green.shade300),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.timer, color: Color(0xFFD4AF37)),
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green.shade600,
+                              ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Tiempo transcurrido: $_tiempoTranscurrido',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2C2C2C),
+                              Expanded(
+                                child: Text(
+                                  'Reporte enviado y guardado en la base de datos',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.green.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _resetForm,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Nuevo Reporte'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF8B7355),
+                              side: const BorderSide(color: Color(0xFF8B7355)),
+                            ),
                           ),
                         ),
                       ],

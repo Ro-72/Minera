@@ -12,6 +12,7 @@ import 'pages/notificaciones_page.dart';
 import 'pages/perfil_usuario_page.dart';
 import 'pages/configuracion_ayuda_page.dart';
 import 'pages/inicio_page.dart';
+import 'pages/manual_usuario_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -447,6 +448,21 @@ class _HomePageState extends State<HomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const ConfiguracionAyudaPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.help_outline, color: Color(0xFFD4AF37)),
+              title: const Text(
+                'Manual de Usuario',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManualUsuarioPage(),
                   ),
                 );
               },
